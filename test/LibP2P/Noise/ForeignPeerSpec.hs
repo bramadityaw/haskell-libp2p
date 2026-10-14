@@ -25,15 +25,17 @@ import LibP2P.MultistreamSelect.Negotiation (StreamIO (..), mkMemoryStreamPair)
 import LibP2P.Noise.Handshake
   ( HandshakeResult (..)
   , HandshakeState (..)
-  , NoisePayload (..)
-  , buildHandshakePayload
-  , decodeNoisePayload
   , decodePublicKey
-  , encodeNoisePayload
   , initHandshakeInitiator
   , initHandshakeResponder
   , readHandshakeMsg
   , writeHandshakeMsg
+  )
+import LibP2P.Noise.Handshake.Payload
+  ( NoisePayload (..)
+  , buildHandshakePayload
+  , decodeNoisePayload
+  , encodeNoisePayload
   )
 import LibP2P.Noise.Session (NoiseSession, encryptMessage, mkNoiseSession)
 import LibP2P.Switch.Types (Direction (..))
@@ -91,7 +93,7 @@ runForeignResponder identityKP sigTarget stream = do
   -- Message 3: <- s, se (initiator identity payload)
   msg3 <- readFramedMessage stream
   (p3, _stFinal) <- either fail pure $ readHandshakeMsg st2 msg3
-  np <- either fail pure $ decodeNoisePayload p3
+  np <- either (fail . show) pure $ decodeNoisePayload p3
   pk <- either fail pure $ decodePublicKey (npIdentityKey np)
   pure (fromPublicKey pk, pk)
 
@@ -109,7 +111,7 @@ runForeignInitiator identityKP sigTarget stream = do
   -- Message 2: <- e, ee, s, es (responder identity payload)
   msg2 <- readFramedMessage stream
   (p2, st2) <- either fail pure $ readHandshakeMsg st1 msg2
-  np <- either fail pure $ decodeNoisePayload p2
+  np <- either (fail . show) pure $ decodeNoisePayload p2
   pk <- either fail pure $ decodePublicKey (npIdentityKey np)
 
   -- Message 3: -> s, se (identity payload, signature over sigTarget)

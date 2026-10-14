@@ -31,14 +31,16 @@ import LibP2P.MultistreamSelect.Negotiation
   )
 import LibP2P.Noise.Handshake
   ( HandshakeResult (..)
-  , buildHandshakePayload
-  , decodeNoisePayload
   , decodePublicKey
-  , encodeNoisePayload
   , initHandshakeResponder
   , readHandshakeMsg
   , writeHandshakeMsg
-  , NoisePayload (..)
+  )
+import LibP2P.Noise.Handshake.Payload
+  ( NoisePayload (..)
+  , buildHandshakePayload
+  , decodeNoisePayload
+  , encodeNoisePayload
   )
 import LibP2P.Switch.Types (Direction (..))
 import LibP2P.Switch.Upgrade
@@ -194,6 +196,6 @@ runForeignResponderCapturingMsg1 kp stream = do
   -- Message 3: <- s, se with the initiator's identity payload.
   msg3 <- readFramedMessage stream
   (p3, _stFinal) <- either fail pure $ readHandshakeMsg st2 msg3
-  np <- either fail pure $ decodeNoisePayload p3
+  np <- either (fail . show) pure $ decodeNoisePayload p3
   pk <- either fail pure $ decodePublicKey (npIdentityKey np)
   pure (prefix <> msg1, fromPublicKey pk)

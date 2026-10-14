@@ -52,15 +52,17 @@ import LibP2P.MultistreamSelect.Negotiation
 import LibP2P.Noise.Framing (chunkPlaintext, encodeFrame)
 import LibP2P.Noise.Handshake
   ( HandshakeResult (..)
-  , buildHandshakePayload
-  , decodeNoisePayload
-  , encodeNoisePayload
   , getRemoteNoiseStaticKey
   , initHandshakeInitiator
   , initHandshakeResponder
   , readHandshakeMsg
-  , verifyStaticKey
   , writeHandshakeMsg
+  )
+import LibP2P.Noise.Handshake.Payload
+  ( decodeNoisePayload
+  , encodeNoisePayload
+  , buildHandshakePayload
+  , verifyStaticKey
   )
 import LibP2P.Noise.Session
   ( NoiseSession
@@ -82,6 +84,7 @@ import LibP2P.Transport
 import System.Timeout (timeout)
 import qualified LibP2P.Crypto.Protobuf as Proto
 import qualified LibP2P.Noise.Handshake as HS
+import qualified LibP2P.Noise.Handshake.Payload as NP
 
 -- | Read exactly n bytes from a StreamIO.
 --
@@ -140,17 +143,17 @@ performInitiatorHandshake identityKP stream = do
     readHandshakeMsg hsState1 msg2
 
   -- Decode responder's identity
-  remoteNP <- either (fail . ("initiator decode payload: " <>)) pure $
+  remoteNP <- either (fail . ("initiator decode payload: " <>) . show) pure $
     decodeNoisePayload payload2
   remotePubKey <- either (fail . ("initiator decode pubkey: " <>)) pure $
-    Proto.decodePublicKey (HS.npIdentityKey remoteNP)
+    Proto.decodePublicKey (NP.npIdentityKey remoteNP)
   let remotePeerId = fromPublicKey remotePubKey
 
   -- Verify identity_sig: binds identity key to Noise static key
   case getRemoteNoiseStaticKey hsState2 of
     Nothing -> fail "performInitiatorHandshake: remote Noise static key unavailable after msg2"
     Just remoteNoisePub ->
-      if not (verifyStaticKey remotePubKey remoteNoisePub (HS.npIdentitySig remoteNP))
+      if not (verifyStaticKey remotePubKey remoteNoisePub (NP.npIdentitySig remoteNP))
         then fail "performInitiatorHandshake: identity signature verification failed"
         else pure ()
 
@@ -187,17 +190,17 @@ performResponderHandshake identityKP stream = do
     readHandshakeMsg hsState2 msg3
 
   -- Decode initiator's identity
-  remoteNP <- either (fail . ("responder decode payload: " <>)) pure $
+  remoteNP <- either (fail . ("responder decode payload: " <>) . show) pure $
     decodeNoisePayload payload3
   remotePubKey <- either (fail . ("responder decode pubkey: " <>)) pure $
-    Proto.decodePublicKey (HS.npIdentityKey remoteNP)
+    Proto.decodePublicKey (NP.npIdentityKey remoteNP)
   let remotePeerId = fromPublicKey remotePubKey
 
   -- Verify identity_sig: binds identity key to Noise static key
   case getRemoteNoiseStaticKey hsStateFinal of
     Nothing -> fail "performResponderHandshake: remote Noise static key unavailable after msg3"
     Just remoteNoisePub ->
-      if not (verifyStaticKey remotePubKey remoteNoisePub (HS.npIdentitySig remoteNP))
+      if not (verifyStaticKey remotePubKey remoteNoisePub (NP.npIdentitySig remoteNP))
         then fail "performResponderHandshake: identity signature verification failed"
         else pure ()
 
